@@ -45,11 +45,10 @@ export class Booking {
   bookingTime!: string;
 
   @Column({
-    type: 'enum',
-    enum: BookingStatus,
+    type: 'varchar',
     default: BookingStatus.PENDING,
   })
-  status!: BookingStatus;
+  status: BookingStatus;
 
   @Column({
     type: 'text',

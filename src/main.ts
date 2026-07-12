@@ -24,14 +24,15 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Booking Platform API')
-    .setDescription(
-      'REST API for managing services and customer bookings — EN2H technical assignment',
-    )
+    .setDescription('REST API for managing services and customer bookings')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api/docs', app, document, {
+    customSiteTitle: 'Booking Platform API Docs',
+    customCss: '.swagger-ui .topbar { display: none }',
+  });
 
   const port = process.env.PORT || 3000;
   await app.listen(port);

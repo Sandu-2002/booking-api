@@ -1,98 +1,161 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Booking Platform REST API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS + TypeScript backend for the EN2H "Software Engineer Intern (NestJS)" technical
+assignment. Lets authenticated staff manage **services**, and lets customers create
+**bookings** for those services without needing an account.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Project Overview
 
-## Description
+- **Framework:** NestJS 10 + TypeScript
+- **Database:** PostgreSQL (preferred) or SQLite — switchable via `.env`
+- **ORM:** TypeORM with versioned migrations (no `synchronize: true` in any environment)
+- **Auth:** JWT (register/login, bcrypt password hashing)
+- **Docs:** Swagger UI + Postman collection
+- **Extras:** global exception filter, DTO validation, pagination/search/filter on
+  bookings, duplicate-booking prevention, Docker support, unit tests
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### Modules
 
-## Project setup
+\`\`\`
+src/
+  auth/        Register, Login, JWT strategy & guard
+  services/    Service CRUD (protected)
+  bookings/    Booking CRUD + status lifecycle (public create)
+  common/      Global exception filter
+  config/      TypeORM data source (used by CLI + app)
+  migrations/  Versioned SQL schema migrations
+\`\`\`
 
-```bash
-$ npm install
-```
+### Business Rules Implemented
 
-## Compile and run the project
+- A booking must reference an existing service (404 if not found).
+- \`bookingDate\` cannot be in the past (custom \`class-validator\` rule).
+- A \`CANCELLED\` booking cannot be transitioned to \`COMPLETED\`.
+- Only authenticated users (valid JWT) can create/update/delete services.
+- Anyone can create a booking — no auth required.
+- Duplicate bookings for the same \`serviceId\` + \`bookingDate\` + \`bookingTime\` are
+  rejected with \`409 Conflict\` (bonus), unless the existing one was cancelled.
 
-```bash
-# development
-$ npm run start
+---
 
-# watch mode
-$ npm run start:dev
+## 1. Installation Steps
 
-# production mode
-$ npm run start:prod
-```
+**Prerequisites:** Node.js ≥ 18, npm, and either PostgreSQL or nothing (SQLite needs no
+server).
 
-## Run tests
+\`\`\`bash
+git clone <your-repo-url>
+cd booking-platform
+npm install
+cp .env.example .env
+\`\`\`
 
-```bash
-# unit tests
-$ npm run test
+## 2. Environment Variables
 
-# e2e tests
-$ npm run test:e2e
+Edit \`.env\` (see \`.env.example\` for the full list):
 
-# test coverage
-$ npm run test:cov
-```
+| Variable | Description | Default |
+|---|---|---|
+| \`PORT\` | HTTP port | \`3000\` |
+| \`DB_TYPE\` | \`postgres\` or \`sqlite\` | \`postgres\` |
+| \`DB_HOST\` / \`DB_PORT\` / \`DB_USERNAME\` / \`DB_PASSWORD\` / \`DB_DATABASE\` | Postgres connection | — |
+| \`DB_SQLITE_PATH\` | SQLite file path (if \`DB_TYPE=sqlite\`) | \`db/booking-platform.sqlite\` |
+| \`JWT_SECRET\` | Secret used to sign JWTs | — (set a long random value) |
+| \`JWT_EXPIRES_IN\` | Token lifetime | \`1d\` |
 
-## Deployment
+## 3. Database Setup
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Option A — PostgreSQL (preferred)
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+\`\`\`bash
+createdb booking_platform
+\`\`\`
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+Or use Docker for just the database:
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+\`\`\`bash
+docker run --name booking-postgres -e POSTGRES_PASSWORD=postgres \\
+  -e POSTGRES_DB=booking_platform -p 5432:5432 -d postgres:16-alpine
+\`\`\`
 
-## Resources
+### Option B — SQLite (zero setup)
 
-Check out a few resources that may come in handy when working with NestJS:
+Set \`DB_TYPE=sqlite\` in \`.env\`. Make sure the \`db/\` folder exists: \`mkdir -p db\`.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## 4. Running Migrations
 
-## Support
+\`\`\`bash
+npm run migration:run
+\`\`\`
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+To roll back the last migration:
 
-## Stay in touch
+\`\`\`bash
+npm run migration:revert
+\`\`\`
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 5. Running the Application
 
-## License
+\`\`\`bash
+npm run start:dev
+npm run build && npm run start:prod
+\`\`\`
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+The API is served under the \`/api\` prefix: \`http://localhost:3000/api\`
+
+## 6. API Documentation
+
+- **Swagger UI:** \`http://localhost:3000/api/docs\`
+- **Postman:** import \`postman_collection.json\` from the project root.
+
+### Endpoint Summary
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | \`/api/auth/register\` | — | Register a new user |
+| POST | \`/api/auth/login\` | — | Login, returns JWT |
+| POST | \`/api/services\` | Required | Create service |
+| GET | \`/api/services\` | — | List all services |
+| GET | \`/api/services/:id\` | — | Get one service |
+| PATCH | \`/api/services/:id\` | Required | Update service |
+| DELETE | \`/api/services/:id\` | Required | Delete service |
+| POST | \`/api/bookings\` | — (public) | Create booking |
+| GET | \`/api/bookings\` | — | List bookings (\`?status=&search=&page=&limit=\`) |
+| GET | \`/api/bookings/:id\` | — | Get one booking |
+| PATCH | \`/api/bookings/:id/status\` | — | Update booking status |
+| PATCH | \`/api/bookings/:id/cancel\` | — | Cancel booking |
+
+## 7. Docker
+
+\`\`\`bash
+docker compose up --build
+\`\`\`
+
+## 8. Testing
+
+\`\`\`bash
+npm run test
+npm run test:cov
+\`\`\`
+
+---
+
+## Assumptions Made
+
+- "Update Booking Status" and "Cancel Booking" are exposed as two distinct endpoints
+  since the assignment lists them separately, even though cancel is really a status
+  transition.
+- Added a \`COMPLETED\` status alongside the three specified (\`PENDING\`, \`CONFIRMED\`,
+  \`CANCELLED\`) so the "cancelled bookings cannot be marked as completed" business rule
+  is actually testable/enforceable.
+- Booking read endpoints are left public, since the spec only explicitly restricts
+  *service management* to authenticated users.
+- Both PostgreSQL and SQLite are supported behind the same TypeORM config.
+
+## Future Improvements
+
+- Refresh token rotation and logout/blacklisting.
+- Role-based access control.
+- Rate limiting on the public booking-creation endpoint.
+- Soft deletes for services with existing bookings.
+- E2E tests with a dedicated test database/container.
